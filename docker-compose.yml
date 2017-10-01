@@ -1,38 +1,51 @@
-version: '2'
+version: '3'
 services:
 
   nginx:
     build: ./nginx/
     ports:
-        - 80:80
-    links:
-        - php
-    volumes_from:
-        - app
-  php:
-    build: ./php/
+        - "80:80"
+        - "443:443"
+    volumes:
+        # www
+        - ./web/:/var/www/html
+        # nginx configs
+        - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+        - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+        # # certificates
+        # - ./nginx/ca/server.crt/:/etc/nginx/server.crt:ro
+        # - ./nginx/ca/server.key/:/etc/nginx/server.key:ro
+
+  php-fpm:
+    build: ./php-fpm/
     expose:
         - 9000
-    volumes_from:
-        - app
-  app:
-      image: php:7.0-fpm
-      volumes:
-          - .:/var/www/html
-      command: "true"
+    volumes:
+        - ./web/:/var/www/html
+        # - ./php-fpm/php.ini-production:/usr/local/etc/php/php.ini:ro
+    # environment:
+    #   Set your APP env variables here:
+    #   - APP_KEY=
+    #   - DB_HOST=
+    #   - DB_DATABASE=
+    #   - DB_USERNAME=
+    #   - DB_PASSWORD=
 
   mysql:
     image: mysql:latest
-    volumes_from:
-      - data
+    ports:
+      - 3306:3306
+    volumes:
+      - ./mysql/db_data/var/lib/mysql/:/var/lib/mysql
     environment:
       MYSQL_ROOT_PASSWORD: secret
       MYSQL_DATABASE: project
       MYSQL_USER: project
       MYSQL_PASSWORD: project
-  data:
-    image: mysql:latest
-    volumes:
-      - /var/lib/mysql
-    command: "true"
 
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    ports:
+      - 8080:80
+    environment:
+      PMA_HOST: mysql
